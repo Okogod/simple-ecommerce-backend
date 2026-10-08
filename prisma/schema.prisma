@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Status {
+  PENDING
+  COMPLETED
+}
+
+model User {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  firstname String
+  lastname  String
+  email     String   @unique @db.VarChar(191)
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cartItems CartItems[]
+  order     Order[]
+
+  @@index([email])
+}
+
+model Product {
+  id         String       @id @default(cuid()) @db.VarChar(191)
+  name       String       @unique @db.VarChar(191)
+  price      Float
+  quantity   Int
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  cartItems  CartItems[]
+  orderItems OrderItems[]
+
+  @@index([name])
+}
+
+model CartItems {
+  id         String       @id @default(cuid()) @db.VarChar(191)
+  userId     String       @db.VarChar(191)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId  String       @db.VarChar(191) // 👈 FIXED: Added missing length limit
+  product    Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity   Int
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  orderItems OrderItems?
+
+  @@index([userId])
+}
+
+model Order {
+  id          String       @id @default(cuid()) @db.VarChar(191)
+  userId      String       @db.VarChar(191)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalAmount Float
+  status      Status       @default(PENDING)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  orderItems  OrderItems[]
+
+  @@index([userId])
+}
+
+model OrderItems {
+  id         String    @id @default(cuid()) @db.VarChar(191)
+  productId  String    @db.VarChar(191)
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderId    String    @db.VarChar(191)
+  order      Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  cartItemId String     @unique
+  cartItem   CartItems @relation(fields: [cartItemId], references: [id])
+  quantity   Int
+
+  @@index([orderId])
+}
